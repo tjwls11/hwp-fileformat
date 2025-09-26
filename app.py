@@ -124,7 +124,6 @@ def main(path, old, new):
     patched_recs = process_records(recs, old, new)
     new_dec = build_records(patched_recs)
 
-    # ✅ 압축 여부에 맞게 저장
     if packed:
         cobj = zlib.compressobj(level=9, wbits=-15)
         new_raw = cobj.compress(new_dec) + cobj.flush()
@@ -133,23 +132,18 @@ def main(path, old, new):
         new_raw = new_dec
         print(f"[DEBUG] 압축 없음: {len(new_raw)} bytes")
 
-    # 새 HWP 파일 작성
     out_path = os.path.splitext(path)[0] + "_edit.hwp"
     dst_storage = pythoncom.StgCreateDocfile(
         out_path, STGM_CREATE | STGM_READWRITE | STGM_SHARE_EXCLUSIVE, 0
     )
 
-    # 원본 모든 stream/storage 복사, Section0만 교체
     for entry in ole.listdir(streams=True, storages=True):
         full_name = "/".join(entry)
         try:
-            # stream
             data = ole.openstream(entry).read()
             if full_name == "BodyText/Section0":
                 print(f"[DEBUG] 교체됨: {full_name}, 새 크기={len(new_raw)}")
                 data = new_raw
-
-            # 부모 Storage 생성
             parts = entry[:-1]
             name = entry[-1]
             cur_storage = dst_storage
@@ -185,7 +179,6 @@ def main(path, old, new):
 
     print(f"[+] 새 HWP 파일 생성 완료: {out_path}")
 
-# ------------------ 실행 ------------------
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("file")
